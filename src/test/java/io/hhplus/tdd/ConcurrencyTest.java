@@ -1,13 +1,10 @@
 package io.hhplus.tdd;
 
-import io.hhplus.tdd.database.PointHistoryTable;
-import io.hhplus.tdd.database.UserPointTable;
-import io.hhplus.tdd.repository.PointRepository;
-import io.hhplus.tdd.repository.PointRepositoryImpl;
 import io.hhplus.tdd.service.PointService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -16,21 +13,15 @@ import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-
+@SpringBootTest
 public class ConcurrencyTest {
 
+    @Autowired
     PointService pointService;
-
-    @BeforeEach
-    void setUp(){
-        PointRepository pointRepository = new PointRepositoryImpl(new PointHistoryTable(), new UserPointTable());
-        pointService = new PointService(pointRepository);
-    }
 
     @Test
     @DisplayName("한번에 여러 포인트가 충전됨.")
-    void ChargeMultiplePoints() throws InterruptedException {
-
+    void chargeMultiplePoints() throws InterruptedException {
         final int threadCount = 3;
         final long incrementsPerThread = 2L;
 
@@ -63,34 +54,50 @@ public class ConcurrencyTest {
 
     @Test
     @DisplayName("한번에 여러 포인트가 사용됨.")
-    void useMultiplePoints() throws InterruptedException {
-        pointService.chargePoints(1,10000L);
+    void useMultiplePoints() {
+        pointService.chargePoints(1L,10000L);
 
         CompletableFuture.allOf(
             CompletableFuture.runAsync(() ->{
-                try {
-                    pointService.usePoints(1, 5000L);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+                pointService.usePoints(1L, 5000L);
             }),
             CompletableFuture.runAsync(() ->{
-                try {
-                    pointService.usePoints(1, 3000L);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+                pointService.usePoints(1L, 3000L);
             }),
             CompletableFuture.runAsync(() ->{
-                try {
-                    pointService.usePoints(1, 2000L);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
+                pointService.usePoints(1L, 2000L);
             })).join();
 
-        assertEquals(pointService.getPoint(1).point(), 0); // 최종 포인트 합산 검증
+        assertEquals(0, pointService.getPoint(1).point()); // 최종 포인트 합산 검증
 
+    }
+
+
+    @Test
+    @DisplayName("충전/사용 경합")
+    void useMultipleFunction(){
+        pointService.chargePoints(1L, 10000L);
+
+        CompletableFuture.allOf(
+            CompletableFuture.runAsync(() ->{
+                pointService.usePoints(1L, 5000L);
+            }),
+            CompletableFuture.runAsync(() ->{
+                pointService.chargePoints(1L, 3000L);
+            }),
+            CompletableFuture.runAsync(() ->{
+                pointService.usePoints(1L, 1000L);
+            }),
+            CompletableFuture.runAsync(() ->{
+                pointService.usePoints(1L, 1000L);
+            }),
+            CompletableFuture.runAsync(() ->{
+                pointService.chargePoints(1L, 2000L);
+            })
+        ).join();
+
+        // then
+        assertEquals(10000L-5000L+3000L-1000L-1000L+2000L, pointService.getPoint(1).point(), 0);
     }
 
 }

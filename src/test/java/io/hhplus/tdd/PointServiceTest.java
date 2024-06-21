@@ -36,7 +36,7 @@ public class PointServiceTest {
 
     @Test
     @DisplayName("특정 유저의 포인트 충전 내역을 조회한다")
-    void getHistoryById() throws InterruptedException {
+    void getHistoryById() {
         pointService.chargePoints(1, 100);
         assertEquals(CHARGE, pointService.getHistories(1).get(0).type());
         assertEquals(100, pointService.getHistories(1).get(0).amount());
@@ -44,7 +44,7 @@ public class PointServiceTest {
 
     @Test
     @DisplayName("1. 특정 유저의 포인트를 충전한다. / 2. 포인트 충전 시 충전 내역을 저장한다.")
-    void chargePointById() throws InterruptedException{
+    void chargePointById() {
         // when
         pointService.chargePoints(1,1000);
         // then
@@ -54,7 +54,7 @@ public class PointServiceTest {
 
     @Test
     @DisplayName("1. 특정 유저가 포인트를 사용한다. / 2. 포인트 사용 시 사용 내역을 저장한다.")
-    void usePoint() throws InterruptedException {
+    void usePoint() {
         // given
         pointService.chargePoints(1,1000);
         // when
@@ -66,12 +66,13 @@ public class PointServiceTest {
     }
 
     // 예외 처리
-    @Test
-    @DisplayName("1. 사용할 포인트가 0이다. / 2. 보유 포인트보다 사용 포인트가 더 많다.")
-    void usePointsExceptionTest() throws InterruptedException {
+    @ParameterizedTest
+    @ValueSource(longs = {0, -1})
+    @DisplayName("1. 사용할 포인트가 0 이하이다. / 2. 보유 포인트보다 사용 포인트가 더 많다.")
+    void usePointsExceptionTest(long amount) {
         // 1. 사용 포인트가 0이다.
         // when
-        RuntimeException exception = assertThrows(RuntimeException.class,()->pointService.usePoints(1, 0));
+        RuntimeException exception = assertThrows(RuntimeException.class,()->pointService.usePoints(1, amount));
         // then
         assertEquals("사용 포인트는 0 이상이어야 합니다.", exception.getMessage());
 

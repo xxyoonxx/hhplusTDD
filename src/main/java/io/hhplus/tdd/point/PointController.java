@@ -43,7 +43,7 @@ public class PointController {
     public UserPoint charge(
             @PathVariable long id,
             @RequestBody long amount
-    ) throws InterruptedException {
+    ) {
         return pointService.chargePoints(id, amount);
     }
 
@@ -54,7 +54,7 @@ public class PointController {
     public UserPoint use(
             @PathVariable long id,
             @RequestBody long amount
-    )  throws InterruptedException {
+    ) {
         return pointService.usePoints(id, amount);
     }
 }
